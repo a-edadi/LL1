@@ -1,17 +1,21 @@
+pub mod error;
 pub mod first_follow;
 pub mod grammar;
+pub mod table;
 
+use error::Ll1Error;
 use std::collections::HashMap;
 use std::error::Error;
 
 use grammar::{Grammar, Production};
+use table::ParsingTable;
 fn main() -> Result<(), Box<dyn Error>> {
     let mut grammar = Grammar::new("S");
 
     // Example grammar:
-    // S → AaB
-    // A → bA | ε
-    // B → cB | ε
+    // S -> AaB
+    // A -> bA | ε
+    // B -> cB | ε
     grammar.add_production("S", vec!["A", "a", "B"]);
     grammar.add_production("A", vec!["b", "A"]);
     grammar.add_production("A", vec!["ε"]);
@@ -47,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let follow_sets = grammar.compute_follow_sets(&first_sets);
 
     // Print FIRST sets without terminals
-    println!("\n🔍 FIRST Sets (Non-terminals only):");
+    println!("\n🔍 FIRST Sets:");
     for (symbol, first_set) in first_sets {
         // Check if the symbol is a non-terminal (i.e., it starts with an uppercase letter)
         if symbol.chars().next().unwrap().is_uppercase() {
@@ -61,11 +65,46 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("FOLLOW({}) = {:?}", symbol, set);
     }
 
-    if grammar.is_ll1() {
-        println!("Accept: The grammar is LL(1)");
-    } else {
-        println!("Reject: The grammar is not LL(1)");
+    match grammar.is_ll1() {
+        Ok(parsing_table) => {
+            // If the grammar is LL(1), print the parsing table
+            println!("{}", parsing_table);
+        }
+        Err(e) => {
+            // If there was an error (e.g., not LL(1)), print the error
+            println!("Error: {}", e);
+        }
     }
 
+    // S → aS | aA
+    // A → a
+    // non_ll1_grammar.add_production("S", vec!["a", "S"]);
+    // non_ll1_grammar.add_production("S", vec!["a", "A"]);
+    // non_ll1_grammar.add_production("A", vec!["a"]);
+
+    // S -> AB | AC
+    // A -> a
+    // B -> b
+    // C -> b
+
+    // Let's test with a non-LL(1) grammar
+    // println!("\nTesting a non-LL(1) grammar:");
+    // let mut non_ll1_grammar = Grammar::new("S");
+
+    // non_ll1_grammar.add_production("S", vec!["A"]);
+    // non_ll1_grammar.add_production("S", vec!["B"]);
+    // non_ll1_grammar.add_production("A", vec!["a"]);
+    // non_ll1_grammar.add_production("B", vec!["a"]);
+
+    // match non_ll1_grammar.is_ll1() {
+    //     Ok(parsing_table) => {
+    //         // If the grammar is LL(1), print the parsing table
+    //         println!("{}", parsing_table);
+    //     }
+    //     Err(e) => {
+    //         // If there was an error (e.g., not LL(1)), print the error
+    //         println!("Error: {}", e);
+    //     }
+    // }
     Ok(())
 }

@@ -173,7 +173,7 @@ impl Grammar {
         result
     }
 
-    // Pseudocode for is_ll1
+    // Pseudocode for is_ll1 using only first follow sets without Parsing Table
     /*
         For each non-terminal (NT):
             For every pair of productions (P1, P2):
@@ -185,8 +185,7 @@ impl Grammar {
                     Return false
         Return true
     */
-
-    pub fn is_ll1(&self) -> bool {
+    pub fn is_ll1_first_follow(&self) -> bool {
         let first_sets = self.compute_first_sets();
         let follow_sets = self.compute_follow_sets(&first_sets);
 

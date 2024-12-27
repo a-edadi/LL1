@@ -1,3 +1,4 @@
+use super::{Ll1Error, ParsingTable};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -40,5 +41,22 @@ impl Grammar {
             non_terminal: non_terminal.to_string(),
             derivation,
         });
+    }
+
+    /// Validates if the grammar is LL(1) using both FIRST/FOLLOW sets and Parsing Table.
+    /// if validation is successful it returns the Parsing table in String
+    pub fn is_ll1(&self) -> Result<String, Ll1Error> {
+        // Step 1: Validate with FIRST/FOLLOW sets
+        if !self.is_ll1_first_follow() {
+            return Err(Ll1Error::FirstFollowValidationError(
+                "Grammar failed LL(1) validation using FIRST/FOLLOW sets.".to_string(),
+            ));
+        }
+
+        // Step 2: Build Parsing Table
+        match ParsingTable::build(self) {
+            Ok(table) => Ok(format!("\nLL(1) Parsing Table:\n{}", table)),
+            Err(e) => Err(Ll1Error::ParsingTableError(e)),
+        }
     }
 }
