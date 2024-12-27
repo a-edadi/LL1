@@ -6,7 +6,7 @@ use std::fmt;
 /// Represents an LL(1) Parsing Table
 #[derive(Debug, Clone)]
 pub struct ParsingTable {
-    table: HashMap<(String, String), Vec<String>>,
+    pub table: HashMap<(String, String), Vec<String>>,
     non_terminals: Vec<String>,
     terminals: Vec<String>,
 }

@@ -1,4 +1,8 @@
 use std::collections::HashSet;
+use std::error::Error;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::Path;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Production {
@@ -40,5 +44,74 @@ impl Grammar {
             non_terminal: non_terminal.to_string(),
             derivation,
         });
+    }
+    pub fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, Box<dyn Error>> {
+        let file = File::open(file_path)?;
+        let reader = io::BufReader::new(file);
+        let mut lines = reader.lines();
+
+        // Read and validate start symbol from first line
+        let start_symbol = lines.next().ok_or("Empty file")??;
+        if !start_symbol.chars().all(|c| c.is_uppercase()) {
+            return Err("Start symbol must be uppercase (non-terminal)".into());
+        }
+        let mut grammar = Grammar::new(&start_symbol);
+
+        // Read productions
+        for (line_num, line) in lines.enumerate() {
+            let line = line?;
+            let parts: Vec<&str> = line.trim().split("->").collect();
+            if parts.len() != 2 {
+                continue; // Skip invalid lines
+            }
+
+            let non_terminal = parts[0].trim();
+            // Validate non-terminal is uppercase
+            if !non_terminal.chars().all(|c| c.is_uppercase()) {
+                return Err(format!(
+                    "Error on line {}: Non-terminal '{}' must be uppercase",
+                    line_num + 2, // +2 because we start counting from 1 and already read the start symbol
+                    non_terminal
+                )
+                .into());
+            }
+
+            let right_side = parts[1].trim();
+
+            // Split by pipe to handle alternative productions
+            let alternatives: Vec<&str> = right_side.split('|').map(|s| s.trim()).collect();
+
+            // Add each alternative as a separate production
+            for alternative in alternatives {
+                let derivation: Vec<&str> = alternative.split_whitespace().collect();
+
+                if !derivation.is_empty() {
+                    // Validate each symbol in the derivation
+                    for symbol in &derivation {
+                        if *symbol != "ε" {
+                            // Skip validation for epsilon
+                            let is_valid = if symbol.chars().all(|c| c.is_uppercase()) {
+                                true // Non-terminal
+                            } else if symbol.chars().all(|c| c.is_lowercase()) {
+                                true // Terminal
+                            } else {
+                                false // Mixed case or invalid
+                            };
+
+                            if !is_valid {
+                                return Err(format!(
+                                    "Error on line {}: Symbol '{}' must be either all uppercase (non-terminal) or all lowercase (terminal)",
+                                    line_num + 2,
+                                    symbol
+                                ).into());
+                            }
+                        }
+                    }
+                    grammar.add_production(non_terminal, derivation);
+                }
+            }
+        }
+
+        Ok(grammar)
     }
 }
