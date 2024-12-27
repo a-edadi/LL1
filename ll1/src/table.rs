@@ -80,7 +80,7 @@ impl ParsingTable {
             .set_content_arrangement(ContentArrangement::Dynamic);
 
         // Header Row
-        let mut header_row = vec![Cell::new("Non-terminal").add_attribute(Attribute::Bold)];
+        let mut header_row = vec![Cell::new("📋").add_attribute(Attribute::Bold)];
         header_row.extend(
             self.terminals
                 .iter()
