@@ -18,7 +18,18 @@ pub struct Grammar {
     pub start_symbol: String,
 }
 
+impl Production {
+    /// Creates a new Production from a non-terminal and its derivation
+    pub fn new(non_terminal: &str, derivation: Vec<&str>) -> Self {
+        Self {
+            non_terminal: non_terminal.to_string(),
+            derivation: derivation.iter().map(|s| s.to_string()).collect(),
+        }
+    }
+}
+
 impl Grammar {
+    /// Creates a new Grammar with the specified start symbol
     pub fn new(start_symbol: &str) -> Self {
         Grammar {
             productions: Vec::new(),
@@ -28,83 +39,41 @@ impl Grammar {
         }
     }
 
+    /// Adds a production rule to the grammar
     pub fn add_production(&mut self, non_terminal: &str, derivation: Vec<&str>) {
         self.non_terminals.insert(non_terminal.to_string());
-        let derivation: Vec<String> = derivation.iter().map(|s| s.to_string()).collect();
 
-        for symbol in &derivation {
-            if symbol.chars().next().unwrap().is_uppercase() {
-                self.non_terminals.insert(symbol.clone());
-            } else if symbol != "ε" {
-                self.terminals.insert(symbol.clone());
+        let production = Production::new(non_terminal, derivation.clone());
+        self.update_symbols(&derivation);
+        self.productions.push(production);
+    }
+
+    /// Updates the terminal and non-terminal sets based on the derivation
+    fn update_symbols(&mut self, derivation: &[&str]) {
+        for symbol in derivation {
+            if Self::is_non_terminal(symbol) {
+                self.non_terminals.insert(symbol.to_string());
+            } else if *symbol != "ε" {
+                self.terminals.insert(symbol.to_string());
             }
         }
-
-        self.productions.push(Production {
-            non_terminal: non_terminal.to_string(),
-            derivation,
-        });
     }
 
-    pub fn is_valid_symbol(symbol: &str) -> bool {
-        if symbol == "ε" {
-            return true;
-        }
-        symbol.chars().all(|c| c.is_lowercase()) || symbol.chars().all(|c| c.is_uppercase())
-    }
-
-    // Function to read the grammar from a string
+    /// Creates a Grammar from a string representation
     pub fn from_string(input: &str, start_symbol: &str) -> Result<Self, Box<dyn Error>> {
-        if !start_symbol.chars().all(|c| c.is_uppercase()) {
-            return Err("Start symbol must be uppercase (non-terminal)".into());
-        }
-
+        Self::validate_start_symbol(start_symbol)?;
         let mut grammar = Grammar::new(start_symbol);
 
         for (line_num, line) in input.lines().enumerate() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue; // Skip empty lines
-            }
+            if let Some((non_terminal, alternatives)) = Self::parse_production_line(line) {
+                Self::validate_non_terminal(&non_terminal, line_num)?;
 
-            // Split the production by the '->' symbol
-            let parts: Vec<&str> = line.split("->").collect();
-            if parts.len() != 2 {
-                continue; // Skip invalid lines
-            }
-
-            let non_terminal = parts[0].trim();
-            
-            // Validate non-terminal is uppercase
-            if !non_terminal.chars().all(|c| c.is_uppercase()) {
-                return Err(format!(
-                    "Error on line {}: Non-terminal '{}' must be uppercase",
-                    line_num + 1,
-                    non_terminal
-                )
-                .into());
-            }
-
-            let right_side = parts[1].trim();
-            let alternatives: Vec<&str> = right_side.split('|').map(|s| s.trim()).collect();
-
-            // Add each alternative as a separate production
-            for alternative in alternatives {
-                let derivation: Vec<&str> = alternative.split_whitespace().collect();
-
-                if !derivation.is_empty() {
-                    // Validate the derivation
-                    for symbol in &derivation {
-                        if !Grammar::is_valid_symbol(symbol) {
-                            return Err(format!(
-                                "Error on line {}: Invalid symbol '{}' in derivation",
-                                line_num + 1,
-                                symbol
-                            )
-                            .into());
-                        }
+                for alternative in alternatives {
+                    let derivation = Self::parse_derivation(&alternative)?;
+                    Self::validate_derivation(&derivation, line_num)?;
+                    if !derivation.is_empty() {
+                        grammar.add_production(&non_terminal, derivation);
                     }
-                    grammar.add_production(non_terminal, derivation);
                 }
             }
         }
@@ -112,9 +81,37 @@ impl Grammar {
         Ok(grammar)
     }
 
-    /// Function to read the grammar from a file
-    /// utilizes from_string
+    /// Creates a Grammar from a file
     pub fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, Box<dyn Error>> {
+        let content = Self::read_file_content(file_path)?;
+        let start_symbol = Self::extract_start_symbol(&content)?;
+        Grammar::from_string(&content, &start_symbol)
+    }
+}
+
+/// Validators  and helpers
+impl Grammar {
+    fn parse_production_line(line: &str) -> Option<(String, Vec<&str>)> {
+        let line = line.trim();
+        if line.is_empty() {
+            return None;
+        }
+
+        let parts: Vec<&str> = line.split("->").collect();
+        if parts.len() != 2 {
+            return None;
+        }
+
+        let non_terminal = parts[0].trim().to_string();
+        let alternatives = parts[1].trim().split('|').map(|s| s.trim()).collect();
+        Some((non_terminal, alternatives))
+    }
+
+    fn parse_derivation(alternative: &str) -> Result<Vec<&str>, Box<dyn Error>> {
+        Ok(alternative.split_whitespace().collect())
+    }
+
+    fn read_file_content<P: AsRef<Path>>(file_path: P) -> Result<String, Box<dyn Error>> {
         let file = File::open(file_path)?;
         let reader = io::BufReader::new(file);
         let mut content = String::new();
@@ -122,16 +119,66 @@ impl Grammar {
             content.push_str(&line?);
             content.push('\n');
         }
+        Ok(content)
+    }
 
-        // Extract the start symbol
+    fn extract_start_symbol(content: &str) -> Result<String, Box<dyn Error>> {
         let start_symbol = content.lines().next().ok_or("Empty file")?;
-
-        // Ensure the start symbol is uppercase
-        if !start_symbol.chars().all(|c| c.is_uppercase()) {
+        if !Self::is_non_terminal(start_symbol) {
             return Err("Start symbol must be uppercase (non-terminal)".into());
         }
+        Ok(start_symbol.to_string())
+    }
 
-        // Use from_string to parse the grammar from the string content
-        Grammar::from_string(&content, start_symbol)
+    /*
+
+    Validators
+
+    */
+
+    /// Checks if a symbol is valid (either terminal, non-terminal, or epsilon)
+    pub fn is_valid_symbol(symbol: &str) -> bool {
+        symbol == "ε" || Self::is_terminal(symbol) || Self::is_non_terminal(symbol)
+    }
+
+    fn is_terminal(symbol: &str) -> bool {
+        symbol.chars().all(|c| c.is_lowercase())
+    }
+
+    fn is_non_terminal(symbol: &str) -> bool {
+        symbol.chars().all(|c| c.is_uppercase())
+    }
+
+    fn validate_start_symbol(start_symbol: &str) -> Result<(), Box<dyn Error>> {
+        if !Self::is_non_terminal(start_symbol) {
+            return Err("Start symbol must be uppercase (non-terminal)".into());
+        }
+        Ok(())
+    }
+
+    fn validate_non_terminal(non_terminal: &str, line_num: usize) -> Result<(), Box<dyn Error>> {
+        if !Self::is_non_terminal(non_terminal) {
+            return Err(format!(
+                "Error on line {}: Non-terminal '{}' must be uppercase",
+                line_num + 1,
+                non_terminal
+            )
+            .into());
+        }
+        Ok(())
+    }
+
+    fn validate_derivation(derivation: &[&str], line_num: usize) -> Result<(), Box<dyn Error>> {
+        for symbol in derivation {
+            if !Self::is_valid_symbol(symbol) {
+                return Err(format!(
+                    "Error on line {}: Invalid symbol '{}' in derivation",
+                    line_num + 1,
+                    symbol
+                )
+                .into());
+            }
+        }
+        Ok(())
     }
 }

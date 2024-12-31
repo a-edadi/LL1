@@ -118,24 +118,23 @@ impl Parser {
                     }
                 }
                 3 => {
-                    // Strategy 3: Conservative recovery using FOLLOW sets
-                    if let Some(top) = stack.back() {
-                        if self.grammar.non_terminals.contains(top) {
-                            if let Some(follow_set) = self.follow_sets.get(top) {
-                                let mut temp_pos = *input_pos;
-                                while temp_pos < self.input.len() {
-                                    let current = self.input[temp_pos].to_string();
-                                    if follow_set.contains(&current) {
-                                        stack.pop_back();
-                                        *input_pos = temp_pos;
-                                        recovery_successful = true;
-                                        println!("Recovered using FOLLOW set at: {}", current);
-                                        break;
-                                    }
-                                    temp_pos += 1;
-                                }
-                            }
+                    // Strategy 3: Use pre-computed sync tokens from FOLLOW sets
+                    let sync_tokens = if let Some(top) = stack.back() {
+                        self.follow_sets.get(top).cloned().unwrap_or_default()
+                    } else {
+                        HashSet::new()
+                    };
+
+                    let mut temp_pos = *input_pos;
+                    while temp_pos < self.input.len() {
+                        let current = self.input[temp_pos].to_string();
+                        if sync_tokens.contains(&current) {
+                            stack.pop_back();
+                            *input_pos = temp_pos;
+                            recovery_successful = true;
+                            break;
                         }
+                        temp_pos += 1;
                     }
                 }
                 _ => unreachable!(),
@@ -174,7 +173,7 @@ impl Parser {
 
         let mut input_pos = 0;
         let mut error_count = 0;
-        const MAX_ERRORS: usize = 3;
+        const MAX_ERRORS: usize = 10;
 
         while !stack.is_empty() && input_pos < self.input.len() {
             if error_count >= MAX_ERRORS {
@@ -192,6 +191,7 @@ impl Parser {
                 } else {
                     error_count += 1;
                     stack.push_back(top.clone());
+                    // Comment this if statement to avoid error recovery
                     if !self.recover(
                         &mut stack,
                         &mut input_pos,
@@ -219,6 +219,7 @@ impl Parser {
                     None => {
                         error_count += 1;
                         stack.push_back(top.clone());
+                        // Comment this if statement to avoid error recovery
                         if !self.recover(
                             &mut stack,
                             &mut input_pos,

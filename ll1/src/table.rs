@@ -72,7 +72,7 @@ impl ParsingTable {
         })
     }
 
-    /// Display the Parsing Table as a formatted table
+    /// Display the Parsing Table as a formatted table using comfy_table
     pub fn to_comfy_table(&self) -> Table {
         let mut table = Table::new();
         table
@@ -112,6 +112,7 @@ impl ParsingTable {
     }
 }
 
+/// Parsing table display
 impl fmt::Display for ParsingTable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let table = self.to_comfy_table();

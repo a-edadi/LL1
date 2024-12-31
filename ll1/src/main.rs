@@ -12,16 +12,8 @@ use parser::Parser;
 use table::ParsingTable;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // Amirhossein Edadi - Amin Owrang Pour - Amin Sheikh Azimi
     let grammar = Grammar::from_file("src/input.txt")?;
-
-    // let grammar2 = Grammar::from_string(
-    //     "
-    //     S -> A a B
-    //     A -> b A | ε
-    //     B -> c B | ε
-    //     ",
-    //     "S",
-    // )?;
 
     grammar.print_input_grammar();
     grammar.print_first_set();
@@ -48,3 +40,34 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+// sample 1
+// accepts: ba bacc a b
+// Error recovery Strategy 1: Skip Input   abbdacc
+// Error recovery Strategy 2: Pop stack   bbxacc
+// Error recovery Strategy 3: Follow sets   bbcacc
+/*
+S
+S -> A a B
+A -> b A | ε
+B -> c B | ε
+*/
+
+// sample 2
+// accepts: ixiyi
+/*
+E
+E -> T S
+S -> y T S | ε
+T -> F B
+B -> x F B | ε
+F -> i | n E m
+*/
+
+// sample 3 not LL(1)
+/*
+S
+S -> n L m | a
+L -> S E
+E -> m S E | ε
+*/

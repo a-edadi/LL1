@@ -3,6 +3,11 @@ use std::collections::{HashMap, HashSet};
 use super::Grammar;
 
 impl Grammar {
+    /*
+    Calculates the FIRST set for each terminal and non-terminal.
+    It iterates through productions, propagates FIRST symbols,
+    and handles nullability ("ε") until no changes occur.
+    */
     pub fn compute_first_sets(&self) -> HashMap<String, HashSet<String>> {
         let mut first_sets: HashMap<String, HashSet<String>> = HashMap::new();
 
@@ -65,6 +70,11 @@ impl Grammar {
         first_sets
     }
 
+    /*
+    Calculates the FOLLOW set for each non-terminal.
+    It tracks terminal symbols and nullability following each symbol
+    in productions and propagates updates iteratively.
+    */
     pub fn compute_follow_sets(
         &self,
         first_sets: &HashMap<String, HashSet<String>>,
@@ -143,6 +153,11 @@ impl Grammar {
         follow_sets
     }
 
+    /*
+    Computes the FIRST set of a sequence of symbols.
+    It combines the FIRST sets of each symbol, considering nullability
+    to handle sequences correctly.
+    */
     pub fn compute_first_of_string(
         &self,
         string: &[String],

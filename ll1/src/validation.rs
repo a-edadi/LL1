@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{Grammar, ParsingTable, Production};
 
 impl Grammar {
-    // Validates if the grammar is LL(1) using both FIRST/FOLLOW sets and Parsing Table.
+    /// Validates if the grammar is LL(1) using both FIRST/FOLLOW sets and Parsing Table.
     pub fn is_ll1(&self) -> bool {
         if self.is_ll1_first_follow() && self.is_ll1_parsing_table() {
             true
@@ -12,7 +12,7 @@ impl Grammar {
         }
     }
 
-    // Check if it is LL(1) using the ParseTable
+    /// Check if it is LL(1) using the ParseTable
     /// The parse table is built then
     /// if there are conflicts    -> it is not LL(1)
     /// if there are no conflicts -> it is LL(1)
