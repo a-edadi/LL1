@@ -14,6 +14,15 @@ use table::ParsingTable;
 fn main() -> Result<(), Box<dyn Error>> {
     let grammar = Grammar::from_file("src/input.txt")?;
 
+    // let grammar2 = Grammar::from_string(
+    //     "
+    //     S -> A a B
+    //     A -> b A | ε
+    //     B -> c B | ε
+    //     ",
+    //     "S",
+    // )?;
+
     grammar.print_input_grammar();
     grammar.print_first_set();
     grammar.print_follow_set();

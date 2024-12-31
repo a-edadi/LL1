@@ -45,40 +45,47 @@ impl Grammar {
             derivation,
         });
     }
-    pub fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, Box<dyn Error>> {
-        let file = File::open(file_path)?;
-        let reader = io::BufReader::new(file);
-        let mut lines = reader.lines();
 
-        // Read and validate start symbol from first line
-        let start_symbol = lines.next().ok_or("Empty file")??;
+    pub fn is_valid_symbol(symbol: &str) -> bool {
+        if symbol == "ε" {
+            return true;
+        }
+        symbol.chars().all(|c| c.is_lowercase()) || symbol.chars().all(|c| c.is_uppercase())
+    }
+
+    // Function to read the grammar from a string
+    pub fn from_string(input: &str, start_symbol: &str) -> Result<Self, Box<dyn Error>> {
         if !start_symbol.chars().all(|c| c.is_uppercase()) {
             return Err("Start symbol must be uppercase (non-terminal)".into());
         }
-        let mut grammar = Grammar::new(&start_symbol);
 
-        // Read productions
-        for (line_num, line) in lines.enumerate() {
-            let line = line?;
-            let parts: Vec<&str> = line.trim().split("->").collect();
+        let mut grammar = Grammar::new(start_symbol);
+
+        for (line_num, line) in input.lines().enumerate() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue; // Skip empty lines
+            }
+
+            // Split the production by the '->' symbol
+            let parts: Vec<&str> = line.split("->").collect();
             if parts.len() != 2 {
                 continue; // Skip invalid lines
             }
 
             let non_terminal = parts[0].trim();
+            
             // Validate non-terminal is uppercase
             if !non_terminal.chars().all(|c| c.is_uppercase()) {
                 return Err(format!(
                     "Error on line {}: Non-terminal '{}' must be uppercase",
-                    line_num + 2, // +2 because we start counting from 1 and already read the start symbol
+                    line_num + 1,
                     non_terminal
                 )
                 .into());
             }
 
             let right_side = parts[1].trim();
-
-            // Split by pipe to handle alternative productions
             let alternatives: Vec<&str> = right_side.split('|').map(|s| s.trim()).collect();
 
             // Add each alternative as a separate production
@@ -86,25 +93,15 @@ impl Grammar {
                 let derivation: Vec<&str> = alternative.split_whitespace().collect();
 
                 if !derivation.is_empty() {
-                    // Validate each symbol in the derivation
+                    // Validate the derivation
                     for symbol in &derivation {
-                        if *symbol != "ε" {
-                            // Skip validation for epsilon
-                            let is_valid = if symbol.chars().all(|c| c.is_uppercase()) {
-                                true // Non-terminal
-                            } else if symbol.chars().all(|c| c.is_lowercase()) {
-                                true // Terminal
-                            } else {
-                                false // Mixed case or invalid
-                            };
-
-                            if !is_valid {
-                                return Err(format!(
-                                    "Error on line {}: Symbol '{}' must be either all uppercase (non-terminal) or all lowercase (terminal)",
-                                    line_num + 2,
-                                    symbol
-                                ).into());
-                            }
+                        if !Grammar::is_valid_symbol(symbol) {
+                            return Err(format!(
+                                "Error on line {}: Invalid symbol '{}' in derivation",
+                                line_num + 1,
+                                symbol
+                            )
+                            .into());
                         }
                     }
                     grammar.add_production(non_terminal, derivation);
@@ -113,5 +110,28 @@ impl Grammar {
         }
 
         Ok(grammar)
+    }
+
+    /// Function to read the grammar from a file
+    /// utilizes from_string
+    pub fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, Box<dyn Error>> {
+        let file = File::open(file_path)?;
+        let reader = io::BufReader::new(file);
+        let mut content = String::new();
+        for line in reader.lines() {
+            content.push_str(&line?);
+            content.push('\n');
+        }
+
+        // Extract the start symbol
+        let start_symbol = content.lines().next().ok_or("Empty file")?;
+
+        // Ensure the start symbol is uppercase
+        if !start_symbol.chars().all(|c| c.is_uppercase()) {
+            return Err("Start symbol must be uppercase (non-terminal)".into());
+        }
+
+        // Use from_string to parse the grammar from the string content
+        Grammar::from_string(&content, start_symbol)
     }
 }
