@@ -26,7 +26,6 @@ impl Grammar {
 
     /// Method to print the FIRST sets
     pub fn print_first_set(&self) {
-        // Compute FIRST sets
         let first_sets = self.compute_first_sets();
 
         // Print FIRST sets without terminals
@@ -41,13 +40,9 @@ impl Grammar {
 
     /// Method to print the FOLLOW sets
     pub fn print_follow_set(&self) {
-        // Compute FIRST sets
         let first_sets = self.compute_first_sets();
-
-        // Compute FOLLOW sets
         let follow_sets = self.compute_follow_sets(&first_sets);
 
-        // Display FOLLOW sets
         println!("\n🔍 FOLLOW Sets:");
         for (symbol, set) in follow_sets {
             println!("FOLLOW({}) = {:?}", symbol, set);

@@ -61,7 +61,7 @@ impl Parser {
             return top == &current_input;
         }
 
-        // For non-terminals, check if current input can be derived
+        // For non-terminals, we check if a valid production exists for the current input.
         if self.grammar.non_terminals.contains(top) {
             return self
                 .parsing_table
@@ -72,7 +72,7 @@ impl Parser {
         false
     }
 
-    /// Advanced error recovery with validation
+    /// Panic mode error recovery with validation
     fn recover(
         &self,
         stack: &mut VecDeque<String>,

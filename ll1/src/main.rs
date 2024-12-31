@@ -42,10 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 // sample 1
-// accepts: ba bacc a b
-// Error recovery Strategy 1: Skip Input   abbdacc
-// Error recovery Strategy 2: Pop stack   bbxacc
-// Error recovery Strategy 3: Follow sets   bbcacc
+// accepts: ba bacc a bbacc ac
+// Error recovery Inputs:   abbdacc bbxacc bbcacc
 /*
 S
 S -> A a B
