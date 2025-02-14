@@ -12,8 +12,8 @@ use parser::Parser;
 use table::ParsingTable;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Amirhossein Edadi - Amin Owrang Pour - Amin Sheikh Azimi
-    let grammar = Grammar::from_file("src/input.txt")?;
+    // let grammar = Grammar::from_file("src/input.txt")?;
+    let grammar = Grammar::from_string("A -> B", "A")?;
 
     grammar.print_input_grammar();
     grammar.print_first_set();
@@ -40,32 +40,3 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
-// sample 1
-// accepts: ba bacc a bbacc ac
-// Error recovery Inputs:   abbdacc bbxacc bbcacc
-/*
-S
-S -> A a B
-A -> b A | ε
-B -> c B | ε
-*/
-
-// sample 2
-// accepts: ixiyi
-/*
-E
-E -> T S
-S -> y T S | ε
-T -> F B
-B -> x F B | ε
-F -> i | n E m
-*/
-
-// sample 3 not LL(1)
-/*
-S
-S -> n L m | a
-L -> S E
-E -> m S E | ε
-*/
